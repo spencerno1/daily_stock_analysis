@@ -1,11 +1,2 @@
-[build]
-nixpacksVersion = "1"
-
-[build.nixpacksPlan.phases.setup]
-nixPkgs = ["nodejs_20"]
-
-[build.nixpacksPlan.phases.build]
-cmds = ["cd apps/dsa-web && npm install && npm run build"]
-
 [deploy]
-startCommand = "python main.py --serve-only"
+startCommand = "python main.py --webui"
