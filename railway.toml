@@ -2,4 +2,4 @@
 startCommand = "python main.py --webui"
 
 [build]
-buildCommand = ""
+builder = "nixpacks"
