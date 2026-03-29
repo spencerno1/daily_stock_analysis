@@ -111,6 +111,9 @@ def normalize_stock_code(stock_code: str) -> str:
             return f"HK{base.zfill(5)}"
         if suffix.upper() in ('SH', 'SZ', 'SS', 'BJ') and base.isdigit():
             return base
+        # 台股/興櫃保留原格式，交給 YfinanceFetcher 處理
+        if suffix.upper() in ('TW', 'TWO'):
+            return code
 
     return code
 
@@ -826,6 +829,42 @@ class DataFetcherManager:
         total_fetchers = len(self._fetchers)
         request_start = time.time()
 
+        # 台股/興櫃直接路由到 YfinanceFetcher
+        if stock_code.upper().endswith('.TW') or stock_code.upper().endswith('.TWO'):
+            for attempt, fetcher in enumerate(self._fetchers, start=1):
+                if fetcher.name == "YfinanceFetcher":
+                    try:
+                        logger.info(
+                            f"[数据源尝试 {attempt}/{total_fetchers}] [{fetcher.name}] "
+                            f"台股 {stock_code} 直接路由..."
+                        )
+                        df = fetcher.get_daily_data(
+                            stock_code=stock_code,
+                            start_date=start_date,
+                            end_date=end_date,
+                            days=days,
+                        )
+                        if df is not None and not df.empty:
+                            elapsed = time.time() - request_start
+                            logger.info(
+                                f"[数据源完成] 台股 {stock_code} 使用 [{fetcher.name}] 获取成功: "
+                                f"rows={len(df)}, elapsed={elapsed:.2f}s"
+                            )
+                            return df, fetcher.name
+                    except Exception as e:
+                        error_type, error_reason = summarize_exception(e)
+                        error_msg = f"[{fetcher.name}] ({error_type}) {error_reason}"
+                        logger.warning(
+                            f"[数据源失败 {attempt}/{total_fetchers}] [{fetcher.name}] 台股 {stock_code}: "
+                            f"error_type={error_type}, reason={error_reason}"
+                        )
+                        errors.append(error_msg)
+                    break
+            error_summary = f"台股 {stock_code} 获取失败:\n" + "\n".join(errors)
+            elapsed = time.time() - request_start
+            logger.error(f"[数据源终止] 台股 {stock_code} 获取失败: elapsed={elapsed:.2f}s\n{error_summary}")
+            raise DataFetchError(error_summary)
+
         # 快速路径：美股指数与美股股票直接路由到 YfinanceFetcher
         if is_us_index_code(stock_code) or is_us_stock_code(stock_code):
             for attempt, fetcher in enumerate(self._fetchers, start=1):
@@ -1050,6 +1089,22 @@ class DataFetcherManager:
                             logger.warning(f"[实时行情] 美股 {stock_code} 获取失败: {e}")
                     break
             logger.warning(f"[实时行情] 美股 {stock_code} 无可用数据源")
+            return None
+
+        # 台股實時行情路由到 YfinanceFetcher
+        if stock_code.upper().endswith('.TW') or stock_code.upper().endswith('.TWO'):
+            for fetcher in self._fetchers:
+                if fetcher.name == "YfinanceFetcher":
+                    if hasattr(fetcher, 'get_realtime_quote'):
+                        try:
+                            quote = fetcher.get_realtime_quote(stock_code)
+                            if quote is not None:
+                                logger.info(f"[实时行情] 台股 {stock_code} 成功获取 (来源: yfinance)")
+                                return quote
+                        except Exception as e:
+                            logger.warning(f"[实时行情] 台股 {stock_code} 获取失败: {e}")
+                    break
+            logger.warning(f"[实时行情] 台股 {stock_code} 无可用数据源")
             return None
 
         # 港股实时行情只走港股专用入口，避免按 A 股 source_priority
