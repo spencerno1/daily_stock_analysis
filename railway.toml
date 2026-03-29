@@ -1,0 +1,8 @@
+[build]
+builder = "nixpacks"
+
+[build.nixpacksPlan.phases.setup]
+nixPkgs = ["nodejs_20", "python311"]
+
+[deploy]
+startCommand = "cd apps/dsa-web && npm install && npm run build && cd ../.. && python main.py --serve-only"
