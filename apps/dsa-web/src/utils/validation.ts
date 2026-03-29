@@ -16,6 +16,8 @@ const STOCK_CODE_PATTERNS = [
   /^[A-Z]{1,5}(?:\.(?:US|[A-Z]))?$/, // Common US ticker format
   /^\d{4}\.TW$/, // Taiwan TWSE (e.g. 2330.TW)
   /^\d{4,6}\.TWO$/, // Taiwan OTC (e.g. 6488.TWO)
+  /^\d{4}\.TW$/, // Taiwan TWSE (e.g. 2330.TW)
+  /^\d{4,6}\.TWO$/, // Taiwan OTC (e.g. 6488.TWO)
 ];
 
 /**
