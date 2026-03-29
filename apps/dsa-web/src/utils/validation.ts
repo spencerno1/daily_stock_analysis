@@ -3,66 +3,39 @@ interface ValidationResult {
   message?: string;
   normalized: string;
 }
-
 const SUPPORTED_QUERY_CHARACTERS = /^[A-Z0-9.\u3400-\u9FFF\s]+$/;
-
 const STOCK_CODE_PATTERNS = [
-  /^\d{6}$/, // A-share 6-digit code
-  /^(SH|SZ|BJ)\d{6}$/, // A-share code with exchange prefix
-  /^\d{6}\.(SH|SZ|SS|BJ)$/, // A-share code with exchange suffix
-  /^\d{5}$/, // HK code without prefix
-  /^HK\d{1,5}$/, // HK-prefixed code, for example HK00700
-  /^\d{1,5}\.HK$/, // HK suffix format, for example 00700.HK
-  /^[A-Z]{1,5}(?:\.(?:US|[A-Z]))?$/, // Common US ticker format
-  /^\d{4}\.TW$/, // Taiwan TWSE (e.g. 2330.TW)
-  /^\d{4,6}\.TWO$/, // Taiwan OTC (e.g. 6488.TWO)
-  /^\d{4}\.TW$/, // Taiwan TWSE (e.g. 2330.TW)
-  /^\d{4,6}\.TWO$/, // Taiwan OTC (e.g. 6488.TWO)
+  /^\d{4,6}$/, // Taiwan stock code digits only (e.g. 0050, 2330, 00878)
+  /^\d{4,6}\.TW$/, // Taiwan TWSE with suffix (e.g. 2330.TW)
+  /^\d{4,6}\.TWO$/, // Taiwan OTC with suffix (e.g. 6488.TWO)
 ];
-
-/**
- * Check whether the input looks like a stock code.
- */
 export const looksLikeStockCode = (value: string): boolean => {
   const normalized = value.trim().toUpperCase();
   return STOCK_CODE_PATTERNS.some((regex) => regex.test(normalized));
 };
-
-/**
- * Validate common A-share, HK, and US stock code formats.
- */
 export const validateStockCode = (value: string): ValidationResult => {
   const normalized = value.trim().toUpperCase();
-
   if (!normalized) {
-    return { valid: false, message: '请输入股票代码', normalized };
+    return { valid: false, message: '請輸入股票代碼', normalized };
   }
-
+  // Auto-append .TW for pure digit Taiwan stock codes
+  const autoNormalized = /^\d{4,6}$/.test(normalized)
+    ? normalized + '.TW'
+    : normalized;
   const valid = looksLikeStockCode(normalized);
-
   return {
     valid,
-    message: valid ? undefined : '股票代码格式不正确',
-    normalized,
+    message: valid ? undefined : '請輸入有效的台股代碼（如 0050、2330）',
+    normalized: autoNormalized,
   };
 };
-
-/**
- * Reject obviously invalid free-text queries before they reach the backend.
- */
 export const isObviouslyInvalidStockQuery = (value: string): boolean => {
   const normalized = value.trim().toUpperCase();
-
   if (!normalized || looksLikeStockCode(normalized)) {
     return false;
   }
-
   if (!SUPPORTED_QUERY_CHARACTERS.test(normalized)) {
     return true;
   }
-
-  const hasLetters = /[A-Z]/.test(normalized);
-  const hasDigits = /\d/.test(normalized);
-
-  return hasLetters && hasDigits;
+  return false;
 };
