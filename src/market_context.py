@@ -34,6 +34,10 @@ def detect_market(stock_code: Optional[str]) -> str:
     if code.isdigit() and len(code) == 5:
         return "hk"
 
+    # 台股：.TW 或 .TWO 後綴
+    if code.endswith(".TW") or code.endswith(".TWO"):
+        return "tw"
+
     # US stocks: 1-5 uppercase letters (AAPL, TSLA, GOOGL)
     # Also handles suffixed forms like BRK.B
     if re.match(r'^[A-Z]{1,5}(\.[A-Z]{1,2})?$', code):
@@ -57,6 +61,10 @@ _MARKET_ROLES = {
     "us": {
         "zh": "美股",
         "en": "US stock",
+    },
+    "tw": {
+        "zh": "台股",
+        "en": "Taiwan stock",
     },
 }
 
@@ -89,6 +97,16 @@ _MARKET_GUIDELINES = {
         "en": (
             "- This analysis covers a **US stock** (listed on NYSE/NASDAQ).\n"
             "- US stocks have no daily price limits (but have circuit breakers), allow T+0 and pre/after-market trading. Consider USD FX, Fed policy, and SEC regulations."
+        ),
+    },
+    "tw": {
+        "zh": (
+            "- 本次分析对象为 **台股**（台湾证券交易所上市股票）。\n"
+            "- 台股涨跌幅限制为 ±10%，采用 T+2 交割制度，需关注新台币汇率、外资动向、台积电（2330.TW）连动效应及台湾政策因素。"
+        ),
+        "en": (
+            "- This analysis covers a **Taiwan stock** (listed on TWSE/TPEx).\n"
+            "- Taiwan stocks have ±10% daily price limits, T+2 settlement. Consider TWD FX, foreign investor flows, TSMC correlation, and Taiwan policy factors."
         ),
     },
 }
