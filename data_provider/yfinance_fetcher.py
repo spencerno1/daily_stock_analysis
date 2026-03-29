@@ -122,6 +122,10 @@ class YfinanceFetcher(BaseFetcher):
             logger.debug(f"转换港股代码: {stock_code} -> {hk_code}.HK")
             return f"{hk_code}.HK"
 
+        # 台股/興櫃：直接原樣返回（Yahoo Finance 支援 .TW/.TWO 格式）
+        if code.endswith('.TW') or code.endswith('.TWO'):
+            return code
+
         # 已经包含后缀的情况
         if '.SS' in code or '.SZ' in code or '.HK' in code or '.BJ' in code:
             return code
@@ -638,6 +642,52 @@ class YfinanceFetcher(BaseFetcher):
                 yf_symbol=yf_symbol,
                 index_name=index_name,
             )
+
+        # 台股實時行情
+        if stock_code.upper().endswith('.TW') or stock_code.upper().endswith('.TWO'):
+            try:
+                symbol = stock_code.strip().upper()
+                logger.debug(f"[Yfinance] 获取台股 {symbol} 实时行情")
+                ticker = yf.Ticker(symbol)
+                hist = ticker.history(period='2d')
+                if hist.empty:
+                    logger.warning(f"[Yfinance] 台股 {symbol} 无数据")
+                    return None
+                today = hist.iloc[-1]
+                prev = hist.iloc[-2] if len(hist) > 1 else today
+                price = float(today['Close'])
+                prev_close = float(prev['Close'])
+                change_amount = price - prev_close
+                change_pct = (change_amount / prev_close) * 100 if prev_close else 0
+                high = float(today['High'])
+                low = float(today['Low'])
+                amplitude = ((high - low) / prev_close * 100) if prev_close else 0
+                quote = UnifiedRealtimeQuote(
+                    code=symbol,
+                    name=STOCK_NAME_MAP.get(symbol, symbol),
+                    source=RealtimeSource.FALLBACK,
+                    price=price,
+                    change_pct=round(change_pct, 2),
+                    change_amount=round(change_amount, 4),
+                    volume=int(today['Volume']),
+                    amount=None,
+                    volume_ratio=None,
+                    turnover_rate=None,
+                    amplitude=round(amplitude, 2),
+                    open_price=float(today['Open']),
+                    high=high,
+                    low=low,
+                    pre_close=prev_close,
+                    pe_ratio=None,
+                    pb_ratio=None,
+                    total_mv=None,
+                    circ_mv=None,
+                )
+                logger.info(f"[Yfinance] 台股 {symbol} 实时行情成功: 价格={price}")
+                return quote
+            except Exception as e:
+                logger.warning(f"[Yfinance] 台股 {stock_code} 实时行情失败: {e}")
+                return None
 
         # 仅处理美股股票
         if not self._is_us_stock(stock_code):
