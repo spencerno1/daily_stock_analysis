@@ -8,6 +8,7 @@ const STOCK_CODE_PATTERNS = [
   /^\d{4,6}$/, // Taiwan stock code digits only (e.g. 0050, 2330, 00878)
   /^\d{4,6}\.TW$/, // Taiwan TWSE with suffix (e.g. 2330.TW)
   /^\d{4,6}\.TWO$/, // Taiwan OTC with suffix (e.g. 6488.TWO)
+  /^[A-Z]{1,5}(?:\.US)?$/, // US ticker (e.g. AAPL, TSLA)
 ];
 export const looksLikeStockCode = (value: string): boolean => {
   const normalized = value.trim().toUpperCase();
@@ -25,7 +26,7 @@ export const validateStockCode = (value: string): ValidationResult => {
   const valid = looksLikeStockCode(normalized);
   return {
     valid,
-    message: valid ? undefined : '請輸入有效的台股代碼（如 0050、2330）',
+    message: valid ? undefined : '請輸入有效的台股代碼（如 0050、2330）或美股代碼（如 AAPL）',
     normalized: autoNormalized,
   };
 };

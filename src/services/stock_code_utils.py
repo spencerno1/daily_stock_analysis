@@ -47,18 +47,18 @@ def _strip_exchange_suffix(text: str) -> Optional[str]:
 
 
 def is_code_like(value: str) -> bool:
-    """Check if string looks like a stock code (5-6 digits, 1-5 letters, or prefixed code)."""
+    """Check if string looks like a stock code (Taiwan 4-6 digits, US ticker, or suffixed code)."""
     text = value.strip().upper()
     if not text:
         return False
-    if text.isdigit() and len(text) in (5, 6):
+    # Taiwan stock codes: 4-6 digits (e.g. 0050, 2330, 00878)
+    if text.isdigit() and len(text) in (4, 5, 6):
         return True
-    if _strip_exchange_suffix(text) is not None:
+    # Taiwan with suffix: 2330.TW, 6488.TWO
+    if re.match(r"^\d{4,6}\.(TW|TWO)$", text):
         return True
-    if re.match(r"^[A-Z]{1,5}(?:\.(?:US|[A-Z]))?$", text):
-        return True
-    # Support exchange-prefixed codes: SH600519, SZ000001, HK00700
-    if _strip_exchange_prefix(text) is not None:
+    # US ticker: AAPL, TSLA, TSLA.US
+    if re.match(r"^[A-Z]{1,5}(?:\.US)?$", text):
         return True
     return False
 
