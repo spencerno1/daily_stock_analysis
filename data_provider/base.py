@@ -1337,6 +1337,14 @@ class DataFetcherManager:
         stock_code = normalize_stock_code(stock_code)
         static_name = STOCK_NAME_MAP.get(stock_code)
 
+        # 台股：直接用代碼當名稱（國內數據源無台股名稱）
+        if stock_code.upper().endswith('.TW') or stock_code.upper().endswith('.TWO'):
+            if not hasattr(self, '_stock_name_cache'):
+                self._stock_name_cache = {}
+            self._stock_name_cache[stock_code] = stock_code
+            logger.info(f"[股票名称] 台股使用代码作为名称: {stock_code}")
+            return stock_code
+
         # 1. 先检查缓存
         if hasattr(self, '_stock_name_cache') and stock_code in self._stock_name_cache:
             return self._stock_name_cache[stock_code]
